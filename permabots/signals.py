@@ -42,6 +42,8 @@ def set_bot_api_data(sender, instance, **kwargs):
             user_dict = bot_api.to_dict()
             if 'type' in user_dict.keys():
                 user_dict.pop('type')
+            if 'is_bot' in user_dict.keys():
+                user_dict.pop('is_bot')
             user_api, _ = User.objects.get_or_create(**user_dict)
             instance.user_api = user_api
             logger.info("Success: Bot api info for bot %s set" % str(instance))
