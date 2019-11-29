@@ -40,7 +40,8 @@ def set_bot_api_data(sender, instance, **kwargs):
             bot_api = instance._bot.get_me()
             User = apps.get_model('permabots', 'User')
             user_dict = bot_api.to_dict()
-            user_dict.pop('type')
+            if 'type' in user_dict.keys():
+                user_dict.pop('type')
             user_api, _ = User.objects.get_or_create(**user_dict)
             instance.user_api = user_api
             logger.info("Success: Bot api info for bot %s set" % str(instance))
