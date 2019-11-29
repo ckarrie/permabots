@@ -9,7 +9,8 @@ from permabots import validators
 
 logger = logging.getLogger(__name__)
 
-@python_2_unicode_compatible    
+
+@python_2_unicode_compatible
 class Response(PermabotsModel):
     """
     Model to generate a response to send in a message.
@@ -20,18 +21,18 @@ class Response(PermabotsModel):
     keyboard_template = models.TextField(null=True, blank=True, verbose_name=_("Keyboard template"),
                                          validators=[validators.validate_template, validators.validate_telegram_keyboard],
                                          help_text=_("Template to generate keyboard response. In jinja2 format. http://jinja.pocoo.org/"))
-    
+
     class Meta:
         verbose_name = _('Response')
         verbose_name_plural = _('Responses')
 
     def __str__(self):
         return "(text:%s, keyboard:%s)" % (self.text_template, self.keyboard_template)
-    
+
     def process(self, **context):
         """
         Render response templates with context
-        
+
         :param context: Context generated while processing a conversation handler or a notification hook
         :returns: Text and keyboard response
         """

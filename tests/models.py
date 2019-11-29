@@ -16,13 +16,13 @@ class Author(models.Model):
 
     def get_absolute_url(self):
         return '/authors/%s/' % self.id
-    
-    
+
+
 class Book(models.Model):
     title = models.CharField(max_length=100)
-    owner = models.ForeignKey(settings.AUTH_USER_MODEL, related_name='books', null=True)
-    
-    
+    owner = models.ForeignKey(settings.AUTH_USER_MODEL, related_name='books', null=True, on_delete=models.CASCADE)
+
+
 @receiver(post_save, sender=settings.AUTH_USER_MODEL)
 def create_auth_token(sender, instance=None, created=False, **kwargs):
     if created:

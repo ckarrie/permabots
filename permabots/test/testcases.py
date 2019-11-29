@@ -4,9 +4,9 @@ from django.test import TestCase
 from permabots.models import TelegramUpdate
 from telegram import User
 from permabots.test import factories
-from django.core.urlresolvers import reverse
+from django.urls import reverse
 from rest_framework import status
-from telegram.replykeyboardhide import ReplyKeyboardHide
+#from telegram.replykeyboardhide import ReplyKeyboardHide
 from permabots.models import KikMessage
 from permabots.models import MessengerMessage
 from messengerbot.elements import PostbackButton, WebUrlButton
@@ -16,16 +16,16 @@ try:
 except ImportError:
     import mock  # noqa
 
-class BaseTestBot(TestCase):    
-    
+class BaseTestBot(TestCase):
+
     def _gen_token(self, token):
         return 'Token  %s' % str(token)
-    
+
     def _create_kik_api_message(self):
         self.kik_message = factories.KikTextMessageLibFactory()
         self.kik_message.participants = [self.kik_message.from_user]
         self.kik_messages = {'messages': [self.kik_message]}
-        
+
     def _create_messenger_api_message(self):
         self.messenger_text_message = factories.MessengerMessagingFactory()
         self.messenger_entry = factories.MessengerEntryFactory()
@@ -48,24 +48,24 @@ class BaseTestBot(TestCase):
                         self._create_kik_api_message()
                         self._create_messenger_api_message()
                         self.kwargs = {'content_type': 'application/json', }
-                                        
+
     def _test_message(self, action, message_api=None, number=1, no_handler=False):
         if not message_api:
             message_api = self.message_api
-            
+
         with mock.patch(self.send_message_to_patch, callable=mock.MagicMock()) as mock_send:
             if 'in' in action:
                 self.set_text(action['in'], message_api)
             response = self.client.post(self.webhook_url, self.to_send(message_api), **self.kwargs)
             #  Check response 200 OK
             self.assertEqual(response.status_code, status.HTTP_200_OK)
-            #  Check  
+            #  Check
             if no_handler:
                 self.assertEqual(0, mock_send.call_count)
             else:
                 self.assertBotResponse(mock_send, action, number)
             self.assertAPI(number, message_api)
-            
+
     def _test_hook(self, action, data, no_hook=False, num_recipients=1, recipients=[], auth=None, status_to_check=None,
                    error_to_check=None):
         with mock.patch(self.send_message_to_patch, callable=mock.MagicMock()) as mock_send:
@@ -85,9 +85,9 @@ class BaseTestBot(TestCase):
                     #  Check response 200 OK
                     self.assertEqual(response.status_code, status.HTTP_200_OK)
                     self.assertBotResponse(mock_send, action, num=num_recipients, recipients=recipients)
-                    
+
 class TelegramTestBot(BaseTestBot):
-      
+
     def setUp(self):
         super(TelegramTestBot, self).setUp()
         self.send_message_to_patch = 'telegram.bot.Bot.send_message'
@@ -99,7 +99,7 @@ class TelegramTestBot(BaseTestBot):
             update.message.text = text
         elif update.callback_query:
             update.callback_query.data = text
-        
+
     def to_send(self, update):
         if update.callback_query:
             update_dict = update.to_dict()
@@ -107,44 +107,44 @@ class TelegramTestBot(BaseTestBot):
             update_dict['callback_query']['from'] = user
             return json.dumps(update_dict)
         return update.to_json()
-    
+
     def assertTelegramUser(self, model_user, user):
         self.assertEqual(model_user.id, user.id)
         self.assertEqual(model_user.first_name, user.first_name)
         self.assertEqual(model_user.last_name, user.last_name)
         self.assertEqual(model_user.username, user.username)
-        
-    def assertTelegramChat(self, model_chat, chat):        
+
+    def assertTelegramChat(self, model_chat, chat):
         self.assertEqual(model_chat.id, chat.id)
         self.assertEqual(model_chat.type, chat.type)
         self.assertEqual(model_chat.title, chat.title)
         self.assertEqual(model_chat.username, chat.username)
         self.assertEqual(model_chat.first_name, chat.first_name)
         self.assertEqual(model_chat.last_name, chat.last_name)
-        
-    def assertTelegramMessage(self, model_message, message):        
+
+    def assertTelegramMessage(self, model_message, message):
         self.assertEqual(model_message.message_id, message.message_id)
         self.assertTelegramUser(model_message.from_user, message.from_user)
         self.assertTelegramChat(model_message.chat, message.chat)
         #  TODO: problems with UTCs
         #  self.assertEqual(model_message.date, message.date)
         self.assertEqual(model_message.text, message.text)
-        
-    def assertTelegramCallbackQuery(self, model_callback_query, callback_query):        
+
+    def assertTelegramCallbackQuery(self, model_callback_query, callback_query):
         self.assertEqual(model_callback_query.callback_id, callback_query.id)
         self.assertTelegramUser(model_callback_query.from_user, callback_query.from_user)
         self.assertTelegramChat(model_callback_query.message.chat, callback_query.message.chat)
         #  TODO: problems with UTCs
         #  self.assertEqual(model_message.date, message.date)
         self.assertEqual(model_callback_query.data, callback_query.data)
-        
+
     def assertTelegramUpdate(self, model_update, update):
         self.assertEqual(model_update.update_id, update.update_id)
         if update.message:
             self.assertTelegramMessage(model_update.message, update.message)
         elif update.callback_query:
             self.assertTelegramCallbackQuery(model_update.callback_query, update.callback_query)
-             
+
     def assertInTelegramKeyboard(self, button, keyboard):
         found = False
         for line in keyboard:
@@ -160,18 +160,18 @@ class TelegramTestBot(BaseTestBot):
                     found = True
                     break
         self.assertTrue(found)
-        
+
     def assertBotResponse(self, mock_send, command, num=1, recipients=[]):
         self.assertEqual(num, mock_send.call_count)
         for call_args in mock_send.call_args_list:
             args, kwargs = call_args
-            if not recipients:    
+            if not recipients:
                 if self.telegram_update.message:
                     self.assertEqual(kwargs['chat_id'], self.telegram_update.message.chat.id)
                 elif self.telegram_update.callback_query:
-                    self.assertEqual(kwargs['chat_id'], self.telegram_update.callback_query.message.chat.id)                    
+                    self.assertEqual(kwargs['chat_id'], self.telegram_update.callback_query.message.chat.id)
             else:
-                recipients.remove(kwargs['chat_id'])                
+                recipients.remove(kwargs['chat_id'])
             self.assertEqual(kwargs['parse_mode'], command['out']['parse_mode'])
             if not command['out']['reply_markup']:
                 self.assertTrue(isinstance(kwargs['reply_markup'], ReplyKeyboardHide))
@@ -181,17 +181,17 @@ class TelegramTestBot(BaseTestBot):
                         self.assertInTelegramKeyboard(keyboard, kwargs['reply_markup'].inline_keyboard)
                 else:
                     self.assertInTelegramKeyboard(command['out']['reply_markup'], kwargs['reply_markup'].inline_keyboard)
-                
+
             self.assertIn(command['out']['text'], kwargs['text'])
         self.assertEqual([], recipients)
 
     def assertAPI(self, number, message_api):
         self.assertEqual(number, TelegramUpdate.objects.count())
-        self.assertTelegramUpdate(TelegramUpdate.objects.get(update_id=message_api.update_id), message_api)   
-        
-        
+        self.assertTelegramUpdate(TelegramUpdate.objects.get(update_id=message_api.update_id), message_api)
+
+
 class KikTestBot(BaseTestBot):
-    
+
     def setUp(self):
         super(KikTestBot, self).setUp()
         self.send_message_to_patch = 'kik.api.KikApi.send_messages'
@@ -200,7 +200,7 @@ class KikTestBot(BaseTestBot):
 
     def set_text(self, text, update):
         update['messages'][0].body = text
-        
+
     def to_send(self, messages):
         from time import mktime
         message = messages['messages'][0]
@@ -208,8 +208,8 @@ class KikTestBot(BaseTestBot):
             message.timestamp = int(mktime(message.timestamp.timetuple()))
         message.id = str(message.id)
         return json.dumps({'messages': [message.to_json()]})
-        
-    def assertKikMessage(self, model_message, message):        
+
+    def assertKikMessage(self, model_message, message):
         self.assertEqual(str(model_message.message_id), message.id)
         self.assertEqual(model_message.from_user.username, message.from_user)
         self.assertEqual(model_message.chat.id, message.chat_id)
@@ -224,7 +224,7 @@ class KikTestBot(BaseTestBot):
         if message.type == "start-chatting":
             body = "/start"
         self.assertEqual(model_message.body, body)
-        
+
     def assertInKikKeyboard(self, button, keyboard):
         found = False
         for response in keyboard.responses:
@@ -232,17 +232,17 @@ class KikTestBot(BaseTestBot):
                 found = True
                 break
         self.assertTrue(found)
-        
+
     def assertBotResponse(self, mock_send, command, num=1, recipients=[]):
         self.assertEqual(num, mock_send.call_count)
         for call_args in mock_send.call_args_list:
             args, kwargs = call_args
             message = args[0][0]
-            if not recipients:    
+            if not recipients:
                 self.assertEqual(message.chat_id, self.kik_message.chat_id)
             else:
                 recipients.remove(kwargs['chat_id'])
-                
+
             if not command['out']['reply_markup']:
                 self.assertEqual(message.keyboards, [])
             else:
@@ -257,9 +257,9 @@ class KikTestBot(BaseTestBot):
     def assertAPI(self, number, message_api):
         self.assertEqual(number, KikMessage.objects.count())
         self.assertKikMessage(KikMessage.objects.get(message_id=message_api['messages'][0].id), message_api['messages'][0])
-        
+
 class MessengerTestBot(BaseTestBot):
-      
+
     def setUp(self):
         super(MessengerTestBot, self).setUp()
         self.send_message_to_patch = 'messengerbot.MessengerClient.send'
@@ -271,10 +271,10 @@ class MessengerTestBot(BaseTestBot):
             update.entries[0].messaging[0].message.text = text
         else:
             update.entries[0].messaging[0].message.payload = text
-        
+
     def to_send(self, update):
-        return json.dumps(update.to_json())        
-        
+        return json.dumps(update.to_json())
+
     def assertMessengerMessage(self, model_message, message):
         message = message.entries[0].messaging[0]
         self.assertEqual(model_message.sender, message.sender)
@@ -283,7 +283,7 @@ class MessengerTestBot(BaseTestBot):
             self.assertEqual(model_message.text, message.message.text)
         else:
             self.assertEqual(model_message.postback, message.message.payload)
-            
+
     def assertInMessengerKeyboard(self, button, keyboard):
         found = False
         for element in keyboard.elements:
@@ -300,30 +300,30 @@ class MessengerTestBot(BaseTestBot):
                         found = True
                         break
         self.assertTrue(found)
-        
+
     def assertBotResponse(self, mock_send, command, num=1, recipients=[]):
         self.assertEqual(num, mock_send.call_count)
         for call_args in mock_send.call_args_list:
             args, kwargs = call_args
             message = args[0]
-            if not recipients:    
+            if not recipients:
                 self.assertEqual(message.recipient.recipient_id, self.messenger_entry.messaging[0].sender)
             else:
                 recipients.remove(message.recipient.recipient_id)
-                
+
             if not command['out']['reply_markup']:
                 self.assertEqual(message.message.attachment, None)
                 text = message.message.text
                 self.assertIn(command['out']['body'], text)
-            else:                
+            else:
                 if isinstance(command['out']['reply_markup'], list):
                     for keyboard in command['out']['reply_markup']:
                         self.assertInMessengerKeyboard(keyboard, message.message.attachment.template)
                 else:
                     self.assertInMessengerKeyboard(command['out']['reply_markup'], message.message.attachment.template)
-                self.assertIn(message.message.attachment.template.elements[0].title, command['out']['body'])            
-        self.assertEqual([], recipients)       
-    
+                self.assertIn(message.message.attachment.template.elements[0].title, command['out']['body'])
+        self.assertEqual([], recipients)
+
     def assertAPI(self, number, message_api):
         self.assertEqual(number, MessengerMessage.objects.count())
-        self.assertMessengerMessage(MessengerMessage.objects.all()[0], message_api)      
+        self.assertMessengerMessage(MessengerMessage.objects.all()[0], message_api)
