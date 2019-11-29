@@ -22,10 +22,7 @@ class ChatSerializer(serializers.HyperlinkedModelSerializer):
 class TimestampField(serializers.Field):
 
     def to_internal_value(self, data):
-        dt = datetime.fromtimestamp(data)
-        if not timezone.is_aware(dt):
-            dt = timezone.make_aware(dt)
-        return dt
+        return timezone.make_aware(datetime.fromtimestamp(data))
 
     def to_representation(self, value):
         return int(time.mktime(value.timetuple()))
