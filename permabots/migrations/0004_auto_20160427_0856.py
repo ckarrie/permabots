@@ -8,6 +8,7 @@ import permabots.validators
 
 
 class Migration(migrations.Migration):
+    atomic = False
 
     dependencies = [
         ('permabots', '0003_auto_20160420_0401'),

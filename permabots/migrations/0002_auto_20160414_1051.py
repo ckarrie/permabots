@@ -8,6 +8,7 @@ import uuid
 
 
 class Migration(migrations.Migration):
+    atomic = False
 
     dependencies = [
         ('permabots', '0001_initial'),
