@@ -327,7 +327,7 @@ class TelegramBot(IntegrationBot):
         return 'telegram'
 
     def set_webhook(self, url):
-        self._bot.set_webhook(webhook_url=url)
+        self._bot.set_webhook(url=url)
 
     def _get_chat_and_user(self, update):
         if update.message:
